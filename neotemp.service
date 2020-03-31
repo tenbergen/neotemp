@@ -1,0 +1,13 @@
+[Unit]
+#Launch the NeoPixel Calendar application
+Description= NeoPixel Calendar
+
+[Service]
+User=root
+Type=simple
+ExecStart=/usr/bin/python3 /home/pi/neotemp/neotemp.py
+StandardInput=tty-force
+Restart=always
+
+[Install]
+WantedBy=default.target
