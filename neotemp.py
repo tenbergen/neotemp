@@ -16,44 +16,48 @@ from time import sleep
 from datetime import datetime
 
 # NeoPixel Setup
-neopixel_pin    = board.D21 # Set to where DATA line is connected.
-neopixel_length = 25        # Set to how many lights there are on the NeoPixel strand.
+neopixel_pin = board.D21  # Set to where DATA line is connected. Default is GPIO 18.
+neopixel_length = 32  # Set to how many lights there are on the NeoPixel strand.
+brightness = 0.1  # Set how bright in the range [0..1] the NeoPixels shall be.
+timeout = 0.01  # Transition timing for animations
+
+# Offset correction
+# Needed because pixels will likely not be an exact match to degree indicators on your bezel.
+lower_bound = 90  # Correct temperatures below this value...
+lower_corr = -1  # ... by this many pixels (zero for no correction).
+upper_bound = 115  # Correct temperatures above this value...
+upper_corr = 1  # ... by this many pixels (zero for no correction).
 
 # Color Setup - adjust colors to your preference by setting 'off' to whatever you want. Black recommended.
 # Note: The more white they are and the more pixels are lit, the more current it draws,
 # so make sure your power supply provides at least 3amps to your pixels.
-black   = (0, 0, 0)
-white   = (255, 255, 255)
+black = (0, 0, 0)
+white = (255, 255, 255)
 magenta = (255, 0, 255)
-red     = (255, 0, 0)
-yellow  = (255, 255, 0)
-green   = (0, 255, 0)
-cyan    = (0, 255, 255)
-blue    = (0, 0, 255)
-off     = black  # used for "inactive" pixels, i.e., pixels that aren't lit given current temperature
-dim     = (64, 64, 64) # used for chase animation
-dimmest = (17, 17, 17) # used for chase animation
-on      = white  # used for "active" pixels, if you don't want color coding temperature.
-
+red = (255, 0, 0)
+yellow = (255, 255, 0)
+green = (0, 255, 0)
+cyan = (0, 255, 255)
+blue = (0, 0, 255)
+off = black  # used for "inactive" pixels, i.e., pixels that aren't lit given current temperature
+dim = (64, 64, 64)  # used for chase animation
+dimmest = (17, 17, 17)  # used for chase animation
+on = white  # used for "active" pixels, if you don't want color coding temperature.
 
 # Location Setup - needed to determine the outside temperature where you are
-city      = "Oswego"
-region    = "USA"
-timezone  = "US/Eastern"
-longitude = 43.27
-latitude  = 76.32
+city = "Oswego"
+region = "USA"
 
 ###
 ### From here, don't touch, or you might break stuff.
 ###
-# Debug mode makes temperature switch a lot.
-DEBUG = False
-INTERACTIVE = False  # Ask for user input to set color
+DEBUG = False  # Debug mode makes temperature switch a lot.
+INTERACTIVE = False  # Ask for user input to set color during debug.
 
 # Global infrastructure. Don't touch.
 neotempThread = threading.Thread()
 lock = threading.Lock()
-pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, pixel_order=neopixel.RGB)
+pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.GRB)
 weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
 weather_opts = "?format=%0ut"  # Some options we're passing to them to be able to parse the output better.
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
@@ -95,17 +99,17 @@ def transition(target, color):
     if preTemp < curTemp:  # it's getting warmer, so run up the LEDs
         for n in range(target):
             pixels[n] = color
-            sleep(0.01)
+            sleep(timeout)
         for n in range(neopixel_length - target):
             pixels[n + target] = off
-            sleep(0.01)
+            sleep(timeout)
     if preTemp > curTemp:  # it's getting colder, so run down the LEDs
         for n in reversed(range(neopixel_length - target)):
             pixels[n + target] = off
-            sleep(0.01)
+            sleep(timeout)
         for n in reversed(range(target)):
             pixels[n] = color
-            sleep(0.01)
+            sleep(timeout)
 
 
 # Interrupt handler that turns pixels off when neotemp exits (SIGTERM). Also unschedules the next thread.
@@ -116,16 +120,16 @@ def interrupt():
     sleep(1)
     pixels.fill(off)
 
+
 # Initializes the pixels at startup. Turns them all on and off in a neat animation, partly because we can and partly
 # to test if they are all working.
 def initPixels():
     global neotempThread
     global pixels
     pixels.fill(off)
-    t = 0.03
     sleep(0.5)
     for n in range(neopixel_length):
-        sleep(t)
+        sleep(timeout)
         pixels[n] = on
         if n == 0:
             continue
@@ -136,35 +140,26 @@ def initPixels():
         if n == 2:
             continue
         pixels[n - 3] = off
-    if neopixel_length > 2:
-        pixels[neopixel_length-1] = dim
-        pixels[neopixel_length-2] = dimmest
-        pixels[neopixel_length-3] = off
-        sleep(t)
-        pixels[neopixel_length-1] = dimmest
-        pixels[neopixel_length-2] = off
-        sleep(t)
-        pixels[neopixel_length-1] = off
     for n in reversed(range(neopixel_length)):
-        sleep(t)
+        sleep(timeout)
         pixels[n] = on
-        if n == neopixel_length-1:
+        if n == neopixel_length - 1:
             continue
         pixels[n + 1] = dim
-        if n == neopixel_length-2:
+        if n == neopixel_length - 2:
             continue
         pixels[n + 2] = dimmest
-        if n == neopixel_length-3:
+        if n == neopixel_length - 3:
             continue
         pixels[n + 3] = off
     if neopixel_length > 2:
         pixels[0] = dim
         pixels[1] = dimmest
         pixels[2] = off
-        sleep(t)
+        sleep(timeout)
         pixels[0] = dimmest
         pixels[1] = off
-        sleep(t)
+        sleep(timeout)
         pixels[0] = off
     sleep(0.5)
 
@@ -185,44 +180,57 @@ def run():
             curTemp = int(input("Next temperature:"))
     else:
         try:
-            #get current weather for current location and extract temperature
+            # get current weather for current location and extract temperature
             response = urllib.request.urlopen(urllib.request.Request(url))
             curTemp = int(re.sub("[^\d.]", "", response.read().decode('utf-8')))
         except:
-            # if this doesn't work, the weather service probably didn't like the scheduled request. Try again soon-ish, doesn't matter when.
+            # if this doesn't work, the weather service probably didn't like the scheduled request.
+            # Try again soon-ish, doesn't matter when.
             interval = random.randrange(0, temp_max)
             curTemp = preTemp
 
-    #compute which pixels to light in the interval [0..neopixel_length]
-    #all pixels up to targetPixel will be toggled "active"
+    # compute which pixels to light in the interval [0..neopixel_length]
+    # all pixels up to targetPixel will be toggled "active"
     targetPixel = round((curTemp - temp_min) * (neopixel_length - 0) / (temp_max - temp_min) + 0)
-    #compute the color of the "active" pixels. Very cold and very hot temperatures turn purple.
+    # pixels and temperature "ticks" on your gauge might not line up. Correct the pixels as follows.
+    if curTemp <= lower_bound:
+        targetPixel = targetPixel + lower_corr
+    if curTemp >= upper_bound:
+        targetPixel = targetPixel + upper_corr
+    # if targetPixel exceeds number of pixels, fix it.
+    if targetPixel < 0:
+        targetPixel = 0
+    if targetPixel > neopixel_length:
+        targetPixel = neopixel_length
+
+    # compute the color of the "active" pixels. Very cold and very hot temperatures turn purple.
     targetHue = hue_min + ((hue_max - hue_min) / (display_max - display_min)) * (curTemp - display_min)
-    #limit extremely hot temperatures to "red."
+    # limit extremely hot temperatures to "red."
     if targetHue < 0:
         targetHue = 0
-    #limit extremely cold temperatures to "blue."
+    # limit extremely cold temperatures to "blue."
     if targetHue > display_max:
-       targetHue = display_max
-    #convert hue to RBG, because hue is convenient for integer mapping, but pixels are addressed with RBG.
+        targetHue = display_max
+    # convert hue to RBG, because hue is convenient for integer mapping, but pixels are addressed with RBG.
     (r, g, b) = colorsys.hls_to_rgb(((targetHue) / 255), 0.5, 1)
-    #green channel is wide, so let's make it smaller to get colors that visually map better to temperatures
-    rgb = (int(r * 255), int(g * 128), int(b * 255))
+    # green channel is wide, so let's make it smaller to get colors that visually map better to temperatures
+    rgb = (int(r * 255), int(g * 64), int(b * 255))
 
     if DEBUG:
         print(datetime.now(), ": ", curTemp, ", hue: ", round(targetHue), ", ", rgb, "for pixel ", targetPixel)
 
-    #now turn appropriate pixels active and inactive
+    # now turn appropriate pixels active and inactive
     transition(targetPixel, rgb)
 
-    #remember what temperature you displayed last (to switch of unnecessary pixels, possibly)
+    # remember what temperature you displayed last (to switch of unnecessary pixels, possibly)
     preTemp = curTemp
-    #recursively schedule next thread
+    # recursively schedule next thread
     neotempThread = threading.Timer(interval, run, ())
     neotempThread.start()
 
-#start neotemp
+
+# start neotemp
 initPixels()
 # when neocal exits (SIGTERM), unschedule the next thread
 atexit.register(interrupt)
-#END.
+# END.
