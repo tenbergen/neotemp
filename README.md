@@ -1,5 +1,5 @@
 # neotemp
- An adafruit neopixel stick thermostat for Raspberry Pi.
+ An adafruit NeoPxel stick thermostat for Raspberry Pi.
 
 ## Hardware Requirements
 - at least one adafruit NeoPixel Stick with 8x 5050 RGB LEDs or some other WS2812B or SK6812-based LED things (example: https://www.adafruit.com/product/1426)
@@ -14,38 +14,40 @@
 ## Hardware assembly
 1. Solder the 40-pin header to the Raspberry Pi.
 2. Solder the Level Shifter to the protoboard following these directions: https://learn.adafruit.com/neopixels-on-raspberry-pi/raspberry-pi-wiring
-3. Solder the NeoPixel strips together and attach to the +5V, Ground, and DATA pins on your protoboard.
+3. Solder the NeoPixel sticks together and attach to the +5V, Ground, and DATA pins on your protoboard.
 Note: The code assumed you attached the NeoPixel sticks to GPIO21 (not default GPIO18).
 
 ## Software Dependencies
-- Raspbian Strech or higher
+- Raspbian Stretch or higher
 - root privileges
 - python3 with pip3
 - python3 modeules: adafruit-circuitpython-neopixel and rpi_ws281x (see https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage)
 
 ## Requirements
-neotemp requires to be executed with sudo, as adafruit neopixel library requires elevated permissions. It also requries python3.
+neotemp requires to be executed with sudo, as adafruit NeoPixel library requires elevated permissions. It also requires python3.
 
 ## Installation
-
-Execute on Raspbian stretch or newer:
+In a terminal, execute:
 ```
-git clone https://github.com/tenbergen/neocal.git
-cd neocal
+git clone https://github.com/tenbergen/neotemp.git
+cd neotemp
 sudo sh install.sh
 ```
 The service will start immediately and after reboot.
 
+## Location Setup & Customization
+Edit variables in `neocal.py` with your favorite text editor 
+for configuration options regarding pixel orientation, your location for datetime/nightime pixel colors, etc.
+Follow instructions in the code comments.
+
 ### Control the service
-To start/stop the service, simply run:
+To start/stop/restart the service after customization, simply run:
 ```
-sudo systemctl [start|stop] sysup.service
+sudo systemctl [start|stop|restart] neotemp.service
 ```
-## Customization
-See comments in `neotemp.py` for configuration options regarding number of attached pixels, temperature ranges, etc.
 
 ## Known issues
-Lights won't go out if you stop the service or the service fails.
+Lights won't go out after you stop the service or if the service fails.
 
 ## Contribute
 Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making somehting easy to use and versatile.
