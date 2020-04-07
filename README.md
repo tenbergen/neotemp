@@ -1,5 +1,5 @@
 # neotemp
- An adafruit NeoPxel stick thermostat for Raspberry Pi.
+ An adafruit NeoPixel stick thermostat for Raspberry Pi.
 
 ## Hardware Requirements
 - at least one adafruit NeoPixel Stick with 8x 5050 RGB LEDs or some other WS2812B or SK6812-based LED things (example: https://www.adafruit.com/product/1426)
@@ -36,8 +36,8 @@ sudo sh install.sh
 The service will start immediately and after reboot.
 
 ## Location Setup & Customization
-Edit variables in `neocal.py` with your favorite text editor 
-for configuration options regarding pixel orientation, your location for datetime/nightime pixel colors, etc.
+Edit variables in `neotemp.py` with your favorite text editor 
+for configuration options regarding your location for accurate temperature information, etc.
 Follow instructions in the code comments.
 
 ### Control the service
@@ -50,4 +50,4 @@ sudo systemctl [start|stop|restart] neotemp.service
 Lights won't go out after you stop the service or if the service fails.
 
 ## Contribute
-Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making somehting easy to use and versatile.
+Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making something easy to use and versatile.
