@@ -46,8 +46,5 @@ To start/stop/restart the service after customization, simply run:
 sudo systemctl [start|stop|restart] neotemp.service
 ```
 
-## Known issues
-Lights won't go out after you stop the service or if the service fails.
-
 ## Contribute
 Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making something easy to use and versatile.

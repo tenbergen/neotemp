@@ -19,7 +19,6 @@ from datetime import datetime
 neopixel_pin = board.D21  # Set to where DATA line is connected. Default is GPIO 18.
 neopixel_length = 32  # Set to how many lights there are on the NeoPixel strand.
 brightness = 0.1  # Set how bright in the range [0..1] the NeoPixels shall be.
-timeout = 0.01  # Transition timing for animations
 
 # Offset correction
 # Needed because pixels will likely not be an exact match to degree indicators on your bezel.
@@ -62,6 +61,7 @@ weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. S
 weather_opts = "?format=%0ut"  # Some options we're passing to them to be able to parse the output better.
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
 interval = 1800  # don't poll the weather service more often than once every 30secs. They might not like that.
+timeout  = 0.01  # Transition timing for animations.
 if DEBUG and INTERACTIVE:
     interval = 0
 elif DEBUG:
