@@ -48,3 +48,6 @@ sudo systemctl [start|stop|restart] neotemp.service
 
 ## Contribute
 Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making something easy to use and versatile.
+
+## See also
+neocal - A perpetual calendar for Raspberry Pi using NeoPixel LED lights.

@@ -120,6 +120,15 @@ def interrupt():
     sleep(1)
     pixels.fill(off)
 
+# Interface function to allow hueGPIO to control "off"
+def setHueColor(color, bright):
+    global off
+    global brightness
+    global neotempThread
+    off = int(color[0]), int(color[1]), int(color[2])
+    brightness = bright
+    pixels.brightness = brightness
+    pixels.fill(hue_color)
 
 # Initializes the pixels at startup. Turns them all on and off in a neat animation, partly because we can and partly
 # to test if they are all working.
