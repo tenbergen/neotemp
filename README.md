@@ -26,7 +26,7 @@ Note: The code assumed you attached the NeoPixel sticks to GPIO21 (not default G
 ## Requirements
 neotemp requires to be executed with sudo, as adafruit NeoPixel library requires elevated permissions. It also requires python3.
 
-## Installation
+## Installation 
 In a terminal, execute:
 ```
 git clone https://github.com/tenbergen/neotemp.git
@@ -35,7 +35,7 @@ sudo sh install.sh
 ```
 The service will start immediately and after reboot.
 
-## Location Setup & Customization
+### Location Setup & Customization
 Edit variables in `neotemp.py` with your favorite text editor 
 for configuration options regarding your location for accurate temperature information, etc.
 Follow instructions in the code comments.
@@ -45,6 +45,17 @@ To start/stop/restart the service after customization, simply run:
 ```
 sudo systemctl [start|stop|restart] neotemp.service
 ```
+
+### Add neotemp as hueGPIO component
+Install hueGPIO (https://github.com/tenbergen/hueGPIO).
+<br>
+In a terminal, execute:
+```
+sudo systemctl stop neotemp.service
+sudo systemctl disable neotemp.service
+cp /neotemp/neotemp.py /path/to/hueGPIO/gpio_lights/
+```
+Modify hueGPIO to install `neotemp.py` as a light.
 
 ## Contribute
 Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making something easy to use and versatile.
