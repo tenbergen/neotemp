@@ -92,11 +92,10 @@ display_max = 90
 curTemp = temp_min
 preTemp = curTemp
 
-
 # Helper function to make neat transition animations. Also turns off previous warmer pixels, if needed.
 def transition(target, color):
     global pixels
-    if preTemp < curTemp:  # it's getting warmer, so run up the LEDs
+    if preTemp <= curTemp:  # it's getting warmer, so run up the LEDs
         for n in range(target):
             pixels[n] = color
             sleep(timeout)
@@ -118,17 +117,25 @@ def interrupt():
     global pixels
     neotempThread.cancel()
     sleep(1)
-    pixels.fill(off)
+    pixels.fill(black)
 
 # Interface function to allow hueGPIO to control "off"
 def setHueColor(color, bright):
-    global off
-    global brightness
+    global off, brightness
     global neotempThread
+    neotempThread.cancel()
     off = int(color[0]), int(color[1]), int(color[2])
     brightness = bright
-    pixels.brightness = brightness
-    pixels.fill(hue_color)
+    if brightness == 0.0:
+        off = black
+    else:
+        pixels.brightness = brightness
+    # pixels.fill(off)
+    neotempThread = threading.Timer(0, run, ())
+    neotempThread.start()
+    if DEBUG:
+        print("New color received from hueGPIO: ", off, ", brightness: ", brightness)
+
 
 # Initializes the pixels at startup. Turns them all on and off in a neat animation, partly because we can and partly
 # to test if they are all working.

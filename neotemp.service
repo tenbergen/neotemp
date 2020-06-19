@@ -1,6 +1,6 @@
 [Unit]
-#Launch the NeoPixel Calendar application
-Description= NeoPixel Calendar
+#Launch the NeoPixel Thermometer application
+Description= NeoPixel Thermomete
 
 [Service]
 User=root
