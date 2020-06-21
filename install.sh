@@ -14,7 +14,7 @@ echo "Installing required modules..."
 sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel astral
 echo "   done."
 
-echo "Setting up neocal service..."
+echo "Setting up neotemp service..."
 sudo cp neotemp.service /etc/systemd/system/neotemp.service
 sudo systemctl enable neotemp.service
 echo "   done."
