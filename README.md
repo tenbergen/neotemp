@@ -61,5 +61,5 @@ Modify hueGPIO to install `neotemp.py` as a light.
 Share the love and improve this thing. I'm sure there's plenty ways to make it better. My main concern is making something easy to use and versatile.
 
 ## See also
-[neocal](https://github.com/tenbergen/neocal) - A perpetual calendar for Raspberry Pi using NeoPixel LED lights.
+[neocal](https://github.com/tenbergen/neocal) - A perpetual calendar for Raspberry Pi using NeoPixel LED lights.<br/>
 [hueGPIO](https://github.com/tenbergen/hueGPIO) - A Raspberry Pi middleware for diyHUE to control LEDs connected to GPIO
