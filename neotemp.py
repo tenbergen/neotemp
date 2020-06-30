@@ -10,10 +10,9 @@
 # Description:		Enable service provided by daemon.
 ### END INIT INFO
 import board, neopixel
-import re, random, colorsys, threading, atexit
-import urllib.request
+import re, random, colorsys, threading, atexit, json
+import urllib.request, datetime, os.path
 from time import sleep
-from datetime import datetime
 
 # NeoPixel Setup
 neopixel_pin = board.D21  # Set to where DATA line is connected. Default is GPIO 18.
