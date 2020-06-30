@@ -69,7 +69,7 @@ elif DEBUG:
 hueGPIOThread= threading.Thread()
 FILEMODE     = False
 FILENAME     = "/path/to/hueGPIO.json"
-FILEDATE     = datetime.datetime.now()
+filedate     = datetime.datetime.now()
 
 ## Temperature Setup - all temperatures in Fahrenheit because, let's be honest:
 ## unit-aware computing makes imperial temperature scales less annoying. Also, it maps better to a human perceivable range.
@@ -143,17 +143,17 @@ def setHueColor(color, bright):
 
 # Interface function to read hueGPIO color changes from json file and control "off"
 def loadHueColor():
-    global FILEDATE, hueGPIOThread
+    global filedate, hueGPIOThread
     if os.path.isfile(FILENAME):
         with open(FILENAME) as json_file:
             modTime = datetime.datetime.fromtimestamp(os.path.getmtime(FILENAME))
-            if modTime > FILEDATE:
-                FILEDATE = modTime
+            if modTime > filedate:
+                filedate = modTime
                 data = json.load(json_file)
                 color = int(data['color'].split(',')[0]), int(data['color'].split(',')[1]), int(data['color'].split(',')[2])
                 bright = float(data['brightness'])
                 setHueColor(color, bright)
-    hueGPIOThread = threading.Timer(1, loadHueColor(), ())
+    hueGPIOThread = threading.Timer(1, loadHueColor, ())
     hueGPIOThread.start()
 
 
@@ -203,7 +203,7 @@ def initPixels():
     neotempThread = threading.Timer(0, run, ())
     neotempThread.start()
     if FILEMODE:
-        hueGPIOThread = threading.Timer(0, loadHueColor(), ())
+        hueGPIOThread = threading.Timer(0, loadHueColor, ())
         hueGPIOThread.start()
 
 
