@@ -57,7 +57,7 @@ neotempThread = threading.Thread()
 lock = threading.Lock()
 pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.GRB)
 weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
-weather_opts = "?format=%0ut"  # Some options we're passing to them to be able to parse the output better.
+weather_opts = "?format=%t"  # Single-line output preferred, so we can parse the temperature integer later.
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
 interval = 1800  # don't poll the weather service more often than once every 30secs. They might not like that.
 timeout  = 0.01  # Transition timing for animations.
