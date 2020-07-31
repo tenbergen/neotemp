@@ -46,14 +46,20 @@ on = white  # used for "active" pixels, if you don't want color coding temperatu
 city = "Oswego"
 region = "USA"
 
+# hueGPIO support. No need to touch unless you're running more than one neopixel application.
+FILEMODE     = False
+FILENAME     = "/path/to/hueGPIO.json"
+filedate     = datetime.datetime.now()
+
 ###
 ### From here, don't touch, or you might break stuff.
 ###
 DEBUG = False  # Debug mode makes temperature switch a lot.
 INTERACTIVE = False  # Ask for user input to set color during debug.
 
-# Global infrastructure. Don't touch.
+# Global infrastructure. Seriously, don't touch.
 neotempThread = threading.Thread()
+hueGPIOThread= threading.Thread()
 lock = threading.Lock()
 pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.GRB)
 weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
@@ -65,10 +71,8 @@ if DEBUG and INTERACTIVE:
     interval = 0
 elif DEBUG:
     interval = 3
-hueGPIOThread= threading.Thread()
-FILEMODE     = False
-FILENAME     = "/path/to/hueGPIO.json"
-filedate     = datetime.datetime.now()
+DISABLE_PROPORTIONAL_LIGHTS = False # suppresses turning on pixels proportionally with temperature
+DISABLE_PROPORTIONAL_COLOR  = False # suppresses changing pixel color proportionally with temperature
 
 ## Temperature Setup - all temperatures in Fahrenheit because, let's be honest:
 ## unit-aware computing makes imperial temperature scales less annoying. Also, it maps better to a human perceivable range.
@@ -124,13 +128,19 @@ def interrupt():
 
 # Interface function to allow hueGPIO to control "off"
 def setHueColor(color, bright):
-    global off, brightness
+    global on, off, brightness
     global neotempThread
     neotempThread.cancel()
-    off = int(color[0]), int(color[1]), int(color[2])
+    if DISABLE_PROPORTIONAL_LIGHTS: #if this is set, all pixels are always "on", so set "on" color rather than "off"
+        on = int(color[0]), int(color[1]), int(color[2])
+    else:
+        off = int(color[0]), int(color[1]), int(color[2])
     brightness = bright
     if brightness == 0.0:
-        off = black
+        if DISABLE_PROPORTIONAL_LIGHTS:
+            on = white
+        else:
+            off = black
     else:
         pixels.brightness = brightness
     # pixels.fill(off)
@@ -257,6 +267,10 @@ def run():
     if DEBUG:
         print(datetime.now(), ": ", curTemp, ", hue: ", round(targetHue), ", ", rgb, "for pixel ", targetPixel)
 
+    if DISABLE_PROPORTIONAL_LIGHTS:
+        targetPixel = neopixel_length
+    if DISABLE_PROPORTIONAL_COLOR:
+        rgb = on
     # now turn appropriate pixels active and inactive
     transition(targetPixel, rgb)
 
