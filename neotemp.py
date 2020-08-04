@@ -11,8 +11,9 @@
 ### END INIT INFO
 import board, neopixel
 import re, random, colorsys, threading, atexit, json
-import urllib.request, datetime, os.path
+import urllib.request, os.path
 from time import sleep
+from datetime import datetime
 
 # NeoPixel Setup
 neopixel_pin = board.D21  # Set to where DATA line is connected. Default is GPIO 18.
@@ -46,10 +47,16 @@ on = white  # used for "active" pixels, if you don't want color coding temperatu
 city = "Oswego"
 region = "USA"
 
+# Set active/inactive times in 24h-format. Set all to "None" for always active. See below for example of inactivity between 9:15pm and 3:42am
+active    = '3:42'
+inactive  = '21:15'
+#active  = None
+#inactive = None
+
 # hueGPIO support. No need to touch unless you're running more than one neopixel application.
 FILEMODE     = False
 FILENAME     = "/path/to/hueGPIO.json"
-filedate     = datetime.datetime.now()
+filedate     = datetime.now()
 
 ###
 ### From here, don't touch, or you might break stuff.
@@ -67,12 +74,16 @@ weather_opts = "?format=%t"  # Single-line output preferred, so we can parse the
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
 interval = 1800  # don't poll the weather service more often than once every 30secs. They might not like that.
 timeout  = 0.01  # Transition timing for animations.
+timeformat = '%H:%M' # used to parse active/inactive times
 if DEBUG and INTERACTIVE:
     interval = 0
 elif DEBUG:
     interval = 3
-DISABLE_PROPORTIONAL_LIGHTS = False # suppresses turning on pixels proportionally with temperature
-DISABLE_PROPORTIONAL_COLOR  = False # suppresses changing pixel color proportionally with temperature
+DISABLE_PROPORTIONAL_LIGHTS = False # Turns on all pixels, rather than the number proportional to the temperature.
+                                    # If proportional lights are disabled, ...
+DISABLE_PROPORTIONAL_COLOR  = False # ... hueGPIO needs to control "on" color, which is toggled with this variable.
+                                    #         This also suppresses querying the remote service.
+                                    # ... hueGPIO color will be displayed until interval expires.
 
 ## Temperature Setup - all temperatures in Fahrenheit because, let's be honest:
 ## unit-aware computing makes imperial temperature scales less annoying. Also, it maps better to a human perceivable range.
@@ -129,18 +140,17 @@ def interrupt():
 # Interface function to allow hueGPIO to control "off"
 def setHueColor(color, bright):
     global on, off, brightness
-    global neotempThread
+    global neotempThread, DISABLE_PROPORTIONAL_COLOR
     neotempThread.cancel()
     if DISABLE_PROPORTIONAL_LIGHTS: #if this is set, all pixels are always "on", so set "on" color rather than "off"
         on = int(color[0]), int(color[1]), int(color[2])
+        DISABLE_PROPORTIONAL_COLOR = True
     else:
         off = int(color[0]), int(color[1]), int(color[2])
     brightness = bright
     if brightness == 0.0:
-        if DISABLE_PROPORTIONAL_LIGHTS:
-            on = white
-        else:
-            off = black
+        off = black
+        DISABLE_PROPORTIONAL_COLOR = False
     else:
         pixels.brightness = brightness
     # pixels.fill(off)
@@ -155,7 +165,7 @@ def loadHueColor():
     global filedate, hueGPIOThread
     if os.path.isfile(FILENAME):
         with open(FILENAME) as json_file:
-            modTime = datetime.datetime.fromtimestamp(os.path.getmtime(FILENAME))
+            modTime = datetime.fromtimestamp(os.path.getmtime(FILENAME))
             if modTime > filedate:
                 filedate = modTime
                 data = json.load(json_file)
@@ -164,6 +174,25 @@ def loadHueColor():
                 setHueColor(color, bright)
     hueGPIOThread = threading.Timer(1, loadHueColor, ())
     hueGPIOThread.start()
+
+
+# Deactivates neotemp at a certain time of day and schedules reactivation.
+def setInactive():
+    global neotempThread
+    neotempThread.cancel()
+    transition(0, black)
+    secs = (datetime.strptime(active, timeformat) - datetime.strptime(inactive, timeformat)).seconds
+    activeTimer = threading.Timer(secs, setActive, ())
+    activeTimer.start()
+
+# Activates neotemp at a certain time of day and schedules deactivation.
+def setActive():
+    global neotempThread
+    neotempThread.cancel()
+    secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(active, timeformat)).seconds
+    inactiveTimer = threading.Timer(secs, setInactive, ())
+    inactiveTimer.start()
+    run()
 
 
 # Initializes the pixels at startup. Turns them all on and off in a neat animation, partly because we can and partly
@@ -211,6 +240,13 @@ def initPixels():
     # Create neotemp thread, start immediately
     neotempThread = threading.Timer(0, run, ())
     neotempThread.start()
+
+    # Schedule deactivation if inactivity period is set
+    if not inactive == None:
+        secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(active, timeformat)).seconds
+        inactiveTimer = threading.Timer(secs, setInactive, ())
+        inactiveTimer.start()
+
     if FILEMODE:
         hueGPIOThread = threading.Timer(0, loadHueColor, ())
         hueGPIOThread.start()
@@ -220,13 +256,14 @@ def initPixels():
 # Threading allows us to avoid while(true) loops.
 def run():
     global curTemp, preTemp
-    global interval
+    global interval, DISABLE_PROPORTIONAL_COLOR
     global neotempThread
+    neotempThread.cancel()
     if DEBUG:
         curTemp = random.randrange(temp_min, temp_max)
         if INTERACTIVE:
             curTemp = int(input("Next temperature:"))
-    else:
+    elif not DISABLE_PROPORTIONAL_COLOR:
         try:
             # get current weather for current location and extract temperature
             response = urllib.request.urlopen(urllib.request.Request(url))
@@ -236,6 +273,8 @@ def run():
             # Try again soon-ish, doesn't matter when.
             interval = random.randrange(0, temp_max)
             curTemp = preTemp
+    else:
+        curTemp = preTemp
 
     # compute which pixels to light in the interval [0..neopixel_length]
     # all pixels up to targetPixel will be toggled "active"
@@ -271,6 +310,7 @@ def run():
         targetPixel = neopixel_length
     if DISABLE_PROPORTIONAL_COLOR:
         rgb = on
+        DISABLE_PROPORTIONAL_COLOR = False
     # now turn appropriate pixels active and inactive
     transition(targetPixel, rgb)
 
