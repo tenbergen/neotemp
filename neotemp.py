@@ -16,9 +16,9 @@ from time import sleep
 from datetime import datetime
 
 # NeoPixel Setup
-neopixel_pin = board.D21  # Set to where DATA line is connected. Default is GPIO 18.
-neopixel_length = 32  # Set to how many lights there are on the NeoPixel strand.
-brightness = 0.1  # Set how bright in the range [0..1] the NeoPixels shall be.
+neopixel_pin = board.D18  # Set to where DATA line is connected. Default is GPIO 18.
+neopixel_length = 50  # Set to how many lights there are on the NeoPixel strand.
+brightness = 1.0  # Set how bright in the range [0..1] the NeoPixels shall be.
 
 # Offset correction
 # Needed because pixels will likely not be an exact match to degree indicators on your bezel.
@@ -48,8 +48,8 @@ city = "Oswego"
 region = "USA"
 
 # Set active/inactive times in 24h-format. Set all to "None" for always active. See below for example of inactivity between 9:15pm and 3:42am
-active    = '3:42'
-inactive  = '21:15'
+active    = '16:00'
+inactive  = '00:30'
 #active  = None
 #inactive = None
 
@@ -68,7 +68,7 @@ INTERACTIVE = False  # Ask for user input to set color during debug.
 neotempThread = threading.Thread()
 hueGPIOThread= threading.Thread()
 lock = threading.Lock()
-pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.GRB)
+pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.RGB)
 weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
 weather_opts = "?format=%t"  # Single-line output preferred, so we can parse the temperature integer later.
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
@@ -79,7 +79,7 @@ if DEBUG and INTERACTIVE:
     interval = 0
 elif DEBUG:
     interval = 3
-DISABLE_PROPORTIONAL_LIGHTS = False # Turns on all pixels, rather than the number proportional to the temperature.
+DISABLE_PROPORTIONAL_LIGHTS = True  # Turns on all pixels, rather than the number proportional to the temperature.
                                     # If proportional lights are disabled, ...
 DISABLE_PROPORTIONAL_COLOR  = False # ... hueGPIO needs to control "on" color, which is toggled with this variable.
                                     #         This also suppresses querying the remote service.
@@ -181,7 +181,9 @@ def setInactive():
     global neotempThread
     neotempThread.cancel()
     transition(0, black)
-    secs = (datetime.strptime(active, timeformat) - datetime.strptime(inactive, timeformat)).seconds
+    now = datetime.now().strftime(timeformat)
+    secs = (datetime.strptime(active, timeformat) - datetime.strptime(now, timeformat)).seconds
+    print("off. active in:",secs)
     activeTimer = threading.Timer(secs, setActive, ())
     activeTimer.start()
 
@@ -189,7 +191,9 @@ def setInactive():
 def setActive():
     global neotempThread
     neotempThread.cancel()
-    secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(active, timeformat)).seconds
+    now = datetime.now().strftime(timeformat)
+    secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(now, timeformat)).seconds
+    print("on. inactive in",secs)
     inactiveTimer = threading.Timer(secs, setInactive, ())
     inactiveTimer.start()
     run()
@@ -243,7 +247,9 @@ def initPixels():
 
     # Schedule deactivation if inactivity period is set
     if not inactive == None:
-        secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(active, timeformat)).seconds
+        now = datetime.now().strftime(timeformat)
+        secs = (datetime.strptime(inactive, timeformat) - datetime.strptime(now, timeformat)).seconds
+        print("inactive scheduled in", secs)
         inactiveTimer = threading.Timer(secs, setInactive, ())
         inactiveTimer.start()
 
