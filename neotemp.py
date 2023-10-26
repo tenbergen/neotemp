@@ -17,7 +17,7 @@ from datetime import datetime
 
 # NeoPixel Setup
 neopixel_pin = board.D18  # Set to where DATA line is connected. Default is GPIO 18.
-neopixel_length = 50  # Set to how many lights there are on the NeoPixel strand.
+neopixel_length = 62  # Set to how many lights there are on the NeoPixel strand.
 brightness = 1.0  # Set how bright in the range [0..1] the NeoPixels shall be.
 
 # Offset correction
@@ -48,8 +48,8 @@ city = "Oswego"
 region = "USA"
 
 # Set active/inactive times in 24h-format. Set all to "None" for always active. See below for example of inactivity between 9:15pm and 3:42am
-active    = '16:00'
-inactive  = '00:30'
+active    = '07:50'
+inactive  = '22:30'
 #active  = None
 #inactive = None
 
@@ -68,9 +68,10 @@ INTERACTIVE = False  # Ask for user input to set color during debug.
 neotempThread = threading.Thread()
 hueGPIOThread= threading.Thread()
 lock = threading.Lock()
-pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.RGB)
-weather_srvc = "http://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
-weather_opts = "?format=%t"  # Single-line output preferred, so we can parse the temperature integer later.
+pixels = neopixel.NeoPixel(neopixel_pin, neopixel_length, brightness=brightness, pixel_order=neopixel.GRB)
+reverseStrip = True  # support for mounting the strip upside down
+weather_srvc = "https://wttr.in/"  # This is the weather service we're polling. See: http://wttr.in/:help
+weather_opts = "?format=%t&u"  # Single-line output with imperial units preferred, so we can parse the temperature integer later.
 url = weather_srvc + city + "," + region + weather_opts  # This is the URL for the weather near YOU.
 interval = 1800  # don't poll the weather service more often than once every 30secs. They might not like that.
 timeout  = 0.01  # Transition timing for animations.
@@ -79,7 +80,7 @@ if DEBUG and INTERACTIVE:
     interval = 0
 elif DEBUG:
     interval = 3
-DISABLE_PROPORTIONAL_LIGHTS = True  # Turns on all pixels, rather than the number proportional to the temperature.
+DISABLE_PROPORTIONAL_LIGHTS = False # Turns on all pixels, rather than the number proportional to the temperature.
                                     # If proportional lights are disabled, ...
 DISABLE_PROPORTIONAL_COLOR  = False # ... hueGPIO needs to control "on" color, which is toggled with this variable.
                                     #         This also suppresses querying the remote service.
@@ -89,13 +90,13 @@ DISABLE_PROPORTIONAL_COLOR  = False # ... hueGPIO needs to control "on" color, w
 ## unit-aware computing makes imperial temperature scales less annoying. Also, it maps better to a human perceivable range.
 ## See: https://xkcd.com/1643/
 # Minimum and maximum temperatures to consider for lighting the pixels. Used to map integer ranges.
-temp_min = -40
-temp_max = 140
+temp_min = -20
+temp_max = 120
 # Minimum and maximum hue value to consider for temperatures to display.
 # Idea: the colder the temp, the more blue, so the hue value should be closer to 255;
 #       the warmer the temp, the more red,  so the hue value should be closer to 0.
 # This will transition from purple (intolerable, ca. -40 degF ... or degC ... doesn't matter) over blue
-# (terribly cold, ca. 10 deg F / -32 deg C), # cyan (freezing, ca. 32 degF / 0 degC), green (chilly, 45 degF / 7 degC),
+# (terribly cold, ca. 10 deg F / -32 deg C), # cyan (freezing, ca. 32 degF / 0 degC), green (cold, 45 degF / 7 degC), greenish-yellow (chilly, 55degF / 15 degC),
 # yellow (comfortable 70 degF / 22 degC), orange (pleasant, ca. 80 degF / 25 degC) , to red (uncomfortable 90 degF / 32 degC and up)
 # But, hue scale is inverted compared to temperature, so, we invert min/max.
 hue_min = 104
@@ -104,8 +105,8 @@ hue_max = 0
 # Idea: everything below freezing (32 degF / 0 degC) will stay blue-ish,
 #       everything above terribly hot (90 degF / 32 degC) will stay red.
 # Caveat: temperatures incompatible with life will be purple. Let's hope you won't see that.
-display_min = 32
-display_max = 90
+display_min = 20
+display_max = 95
 # Helper variables needed to keep track of what temperature is being displayed.
 curTemp = temp_min
 preTemp = curTemp
@@ -113,20 +114,36 @@ preTemp = curTemp
 # Helper function to make neat transition animations. Also turns off previous warmer pixels, if needed.
 def transition(target, color):
     global pixels
-    if preTemp <= curTemp:  # it's getting warmer, so run up the LEDs
-        for n in range(target):
-            pixels[n] = color
-            sleep(timeout)
-        for n in range(neopixel_length - target):
-            pixels[n + target] = off
-            sleep(timeout)
-    if preTemp > curTemp:  # it's getting colder, so run down the LEDs
-        for n in reversed(range(neopixel_length - target)):
-            pixels[n + target] = off
-            sleep(timeout)
-        for n in reversed(range(target)):
-            pixels[n] = color
-            sleep(timeout)
+    if not(reverseStrip):
+        if preTemp <= curTemp:  # it's getting warmer, so run up the LEDs
+            for n in range(target):
+                pixels[n] = color
+                sleep(timeout)
+            for n in range(neopixel_length - target):
+                pixels[n + target] = off
+                sleep(timeout)
+        if preTemp > curTemp:  # it's getting colder, so run down the LEDs
+            for n in reversed(range(neopixel_length - target)):
+                pixels[n + target] = off
+                sleep(timeout)
+            for n in reversed(range(target)):
+                pixels[n] = color
+                sleep(timeout)
+    else: # if the strip is reversed, start counting from the end
+        if preTemp >= curTemp:
+            for n in range(target):
+                pixels[n] = off
+                sleep(timeout)
+            for n in range(neopixel_length - target):
+                pixels[n + target] = color
+                sleep(timeout)
+        if preTemp <= curTemp:
+            for n in reversed(range(neopixel_length - target)):
+                pixels[n + target] = color
+                sleep(timeout)
+            for n in reversed(range(target)):
+                pixels[n] = off
+                sleep(timeout)
 
 
 # Interrupt handler that turns pixels off when neotemp exits (SIGTERM). Also unschedules the next thread.
@@ -274,6 +291,10 @@ def run():
             # get current weather for current location and extract temperature
             response = urllib.request.urlopen(urllib.request.Request(url))
             curTemp = int(re.sub("[^\d.]", "", response.read().decode('utf-8')))
+#            print("current temperature: ", curTemp, " C")
+#            if region == "USA":
+#               curTemp = (curTemp * (9 / 5)) + 32
+#               print("current temperature: ", curTemp, " F")
         except:
             # if this doesn't work, the weather service probably didn't like the scheduled request.
             # Try again soon-ish, doesn't matter when.
@@ -285,6 +306,9 @@ def run():
     # compute which pixels to light in the interval [0..neopixel_length]
     # all pixels up to targetPixel will be toggled "active"
     targetPixel = round((curTemp - temp_min) * (neopixel_length - 0) / (temp_max - temp_min) + 0)
+    # if strip is mounted upside down, target pixel is the length of the strip minus the target pixel
+    if (reverseStrip):
+        targetPixel = neopixel_length - targetPixel
     # pixels and temperature "ticks" on your gauge might not line up. Correct the pixels as follows.
     if curTemp <= lower_bound:
         targetPixel = targetPixel + lower_corr
@@ -310,7 +334,7 @@ def run():
     rgb = (int(r * 255), int(g * 64), int(b * 255))
 
     if DEBUG:
-        print(datetime.now(), ": ", curTemp, ", hue: ", round(targetHue), ", ", rgb, "for pixel ", targetPixel)
+        print(datetime.now(), ": ", curTemp, ", hue: ", round(targetHue), ", ", rgb, "for pixel ", targetPixel, ", reversed: ", reverseStrip)
 
     if DISABLE_PROPORTIONAL_LIGHTS:
         targetPixel = neopixel_length
